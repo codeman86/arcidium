@@ -1,13 +1,9 @@
-/** @type {import('prettier').Config} */
-const config = {
-  arrowParens: "always",
-  bracketSpacing: true,
-  printWidth: 100,
+/** @type {import("prettier").Config} */
+export default {
   semi: true,
-  singleQuote: false,
+  trailingComma: 'es5',
+  singleQuote: true,
+  printWidth: 80,
   tabWidth: 2,
-  trailingComma: "all",
-  useTabs: false,
+  endOfLine: 'lf',
 };
-
-export default config;
