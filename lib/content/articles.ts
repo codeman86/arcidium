@@ -8,6 +8,8 @@ import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 
+import { rehypeSanitize } from "@/lib/markdown/sanitize";
+
 export const CONTENT_ROOT = path.join(process.cwd(), "content");
 
 export type ArticleFrontMatter = {
@@ -48,7 +50,8 @@ const markdownProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(remarkRehype, { allowDangerousHtml: true })
-  .use(rehypeStringify, { allowDangerousHtml: true });
+  .use(rehypeSanitize)
+  .use(rehypeStringify, { allowDangerousHtml: false });
 
 export async function getAllArticles(options?: { includeDrafts?: boolean }) {
   const includeDrafts = options?.includeDrafts ?? false;
@@ -70,13 +73,14 @@ export async function getArticleBySlug(slug: string) {
   return parseArticleFromFile(filePath);
 }
 
-export async function listArticleMetadata(options?: {
-  includeDrafts?: boolean;
-}) {
+export async function listArticleMetadata(options?: { includeDrafts?: boolean }) {
   const articles = await getAllArticles(options);
-  return articles.map<ArticleMeta>(
-    ({ content: _content, html: _html, ...meta }) => meta
-  );
+  return articles.map<ArticleMeta>((article) => {
+    const { content: unusedContent, html: unusedHtml, ...meta } = article;
+    void unusedContent;
+    void unusedHtml;
+    return meta;
+  });
 }
 
 async function parseArticleFromFile(filePath: string): Promise<Article> {
@@ -122,7 +126,7 @@ async function readMarkdownFilePaths(dir: string): Promise<string[]> {
       }
 
       return entry.toLowerCase().endsWith(".md") ? [entryPath] : [];
-    })
+    }),
   );
 
   return files.flat();
@@ -152,34 +156,24 @@ async function safeStat(filePath: string) {
 
 function normalizeFrontMatter(
   data: Record<string, unknown>,
-  filePath: string
+  filePath: string,
 ): NormalizedArticleFrontMatter {
   if (typeof data.title !== "string" || data.title.trim().length === 0) {
-    throw new Error(
-      `Missing required "title" in front matter for ${filePath}`
-    );
+    throw new Error(`Missing required "title" in front matter for ${filePath}`);
   }
 
   if (typeof data.created !== "string") {
-    throw new Error(
-      `Missing required "created" (ISO date string) in front matter for ${filePath}`
-    );
+    throw new Error(`Missing required "created" (ISO date string) in front matter for ${filePath}`);
   }
 
   return {
     title: data.title,
-    summary:
-      typeof data.summary === "string" ? data.summary.trim() : undefined,
-    category:
-      typeof data.category === "string" ? data.category.trim() : undefined,
-    subcategory:
-      typeof data.subcategory === "string"
-        ? data.subcategory.trim()
-        : undefined,
+    summary: typeof data.summary === "string" ? data.summary.trim() : undefined,
+    category: typeof data.category === "string" ? data.category.trim() : undefined,
+    subcategory: typeof data.subcategory === "string" ? data.subcategory.trim() : undefined,
     tags: coerceTags(data.tags),
     created: data.created,
-    updated:
-      typeof data.updated === "string" ? data.updated.trim() : undefined,
+    updated: typeof data.updated === "string" ? data.updated.trim() : undefined,
     draft: typeof data.draft === "boolean" ? data.draft : false,
   };
 }

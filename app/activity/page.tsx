@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ActivityStreamListener } from "@/components/activity/activity-stream-listener";
 import { listArticleMetadata } from "@/lib/content/articles";
 import { formatDistanceToNow } from "@/lib/date/format-distance";
 
@@ -7,8 +8,7 @@ const NEW_THRESHOLD_DAYS = 3;
 
 export const metadata = {
   title: "Activity • Arcidium",
-  description:
-    "Timeline of recent Arcidium knowledge base updates across all categories.",
+  description: "Timeline of recent Arcidium knowledge base updates across all categories.",
 };
 
 export default async function ActivityPage() {
@@ -18,19 +18,18 @@ export default async function ActivityPage() {
     return (
       <div className="mx-auto max-w-4xl space-y-10 py-16">
         <header className="space-y-4">
-          <h1 className="text-4xl font-semibold tracking-tight">
-            Knowledge Base Activity
-          </h1>
+          <h1 className="text-4xl font-semibold tracking-tight">Knowledge Base Activity</h1>
           <p className="text-muted-foreground">
-            As soon as the first Markdown article is added or updated, it will
-            appear here with a timestamp.
+            As soon as the first Markdown article is added or updated, it will appear here with a
+            timestamp.
           </p>
         </header>
 
         <p className="text-sm text-muted-foreground">
-          Tip: Drop a Markdown file in <code>content/</code>, or create one via
-          the admin editor, then revisit this page.
+          Tip: Drop a Markdown file in <code>content/</code>, or create one via the admin editor,
+          then revisit this page.
         </p>
+        <ActivityStreamListener />
       </div>
     );
   }
@@ -55,12 +54,10 @@ export default async function ActivityPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-10 py-16">
       <header className="space-y-4">
-        <h1 className="text-4xl font-semibold tracking-tight">
-          Knowledge Base Activity
-        </h1>
+        <h1 className="text-4xl font-semibold tracking-tight">Knowledge Base Activity</h1>
         <p className="text-muted-foreground">
-          Latest updates across categories, pulled from Markdown front matter.
-          Newly updated entries are tagged, and drafts are noted.
+          Latest updates across categories, pulled from Markdown front matter. Newly updated entries
+          are tagged, and drafts are noted.
         </p>
       </header>
 
@@ -137,6 +134,7 @@ export default async function ActivityPage() {
           </li>
         ))}
       </ol>
+      <ActivityStreamListener />
     </div>
   );
 }

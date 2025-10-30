@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { unified } from "unified";
@@ -12,6 +13,7 @@ import rehypeStringify from "rehype-stringify";
 import { Button } from "@/components/ui/button";
 import { ToastVariant, useToast } from "@/components/ui/use-toast";
 import { MarkdownEditor } from "@/components/editor/markdown-editor";
+import { ACTIVITY_EVENT_NAME, type ActivityStreamPayload } from "@/lib/activity/stream";
 import { cn } from "@/lib/utils";
 
 type AdminEditorShellProps = {
@@ -57,24 +59,14 @@ type SaveInfo = {
   source: "local" | "remote";
 };
 
-type ActivityStreamPayload = {
-  type: "update" | "delete";
-  slug: string;
-  title: string;
-  category?: string;
-  updatedAt?: string;
-  createdAt?: string;
-  isDraft?: boolean;
-};
-
-const DEFAULT_MARKDOWN =
-  "# New Arcidium Article\n\nStart writing your documentation here.\n";
+const DEFAULT_MARKDOWN = "# New Arcidium Article\n\nStart writing your documentation here.\n";
 
 export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellProps) {
   const initialDraft = React.useMemo(() => createInitialDraft(article), [article]);
   const [draft, setDraft] = React.useState<DraftState>(initialDraft);
   const lastSavedRef = React.useRef<DraftState>(initialDraft);
   const initialSlugRef = React.useRef(initialDraft.slug);
+  const router = useRouter();
   const [isDirty, setIsDirty] = React.useState<boolean>(false);
   const [status, setStatus] = React.useState<SaveStatus>({
     type: "idle",
@@ -92,24 +84,22 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
             source: "local",
           },
         ]
-      : []
+      : [],
   );
   const [knownSlugs, setKnownSlugs] = React.useState<string[]>(() =>
-    Array.from(new Set(existingSlugs))
+    Array.from(new Set(existingSlugs)),
   );
-  const [previewMode, setPreviewMode] = React.useState<"edit" | "preview">(
-    "edit"
-  );
+  const [previewMode, setPreviewMode] = React.useState<"edit" | "preview">("edit");
   const [previewHtml, setPreviewHtml] = React.useState<string>("");
   const [previewLoading, setPreviewLoading] = React.useState<boolean>(false);
   const { toast } = useToast();
   const abortRef = React.useRef<AbortController | null>(null);
   const lastAutosaveToastRef = React.useRef<number>(0);
+  const refreshTimerRef = React.useRef<number | null>(null);
+  const activitySearchTimestampRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
-    setKnownSlugs((current) =>
-      Array.from(new Set([...current, ...existingSlugs]))
-    );
+    setKnownSlugs((current) => Array.from(new Set([...current, ...existingSlugs])));
   }, [existingSlugs]);
 
   React.useEffect(() => {
@@ -147,16 +137,13 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
     };
   }, [draft.markdown]);
 
-  const updateDraft = React.useCallback(
-    (updater: (prev: DraftState) => DraftState) => {
-      setDraft((prev) => {
-        const next = updater(prev);
-        setIsDirty(!draftsEqual(next, lastSavedRef.current));
-        return next;
-      });
-    },
-    []
-  );
+  const updateDraft = React.useCallback((updater: (prev: DraftState) => DraftState) => {
+    setDraft((prev) => {
+      const next = updater(prev);
+      setIsDirty(!draftsEqual(next, lastSavedRef.current));
+      return next;
+    });
+  }, []);
 
   const slugError = React.useMemo(() => {
     const slug = draft.slug.trim();
@@ -235,37 +222,23 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(
-            typeof data?.error === "string"
-              ? data.error
-              : "Failed to save article."
-          );
+          throw new Error(typeof data?.error === "string" ? data.error : "Failed to save article.");
         }
 
         const serverArticle = data?.article ?? null;
         const savedDraft: DraftState = {
           slug: (serverArticle?.slug as string | undefined) ?? slug,
           title: (serverArticle?.title as string | undefined) ?? title,
-          summary:
-            (serverArticle?.summary as string | undefined) ?? nextDraft.summary,
-          category:
-            (serverArticle?.category as string | undefined) ??
-            nextDraft.category,
-          subcategory:
-            (serverArticle?.subcategory as string | undefined) ??
-            nextDraft.subcategory,
+          summary: (serverArticle?.summary as string | undefined) ?? nextDraft.summary,
+          category: (serverArticle?.category as string | undefined) ?? nextDraft.category,
+          subcategory: (serverArticle?.subcategory as string | undefined) ?? nextDraft.subcategory,
           tags: (
-            (serverArticle?.tags as string[] | undefined) ??
-            splitTagsString(nextDraft.tags)
+            (serverArticle?.tags as string[] | undefined) ?? splitTagsString(nextDraft.tags)
           ).join(", "),
           created:
-            (serverArticle?.created as string | undefined) ??
-            ensureIsoString(nextDraft.created),
-          draft:
-            (serverArticle?.draft as boolean | undefined) ?? nextDraft.draft,
-          markdown:
-            (serverArticle?.content as string | undefined) ??
-            nextDraft.markdown,
+            (serverArticle?.created as string | undefined) ?? ensureIsoString(nextDraft.created),
+          draft: (serverArticle?.draft as boolean | undefined) ?? nextDraft.draft,
+          markdown: (serverArticle?.content as string | undefined) ?? nextDraft.markdown,
         };
 
         lastSavedRef.current = savedDraft;
@@ -274,29 +247,21 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
         const now = new Date();
         setStatus({
           type: "saved",
-          message: options?.manual
-            ? "Draft saved."
-            : `Autosaved ${formatTime(now)}`,
+          message: options?.manual ? "Draft saved." : `Autosaved ${formatTime(now)}`,
         });
         const saveRecord: SaveInfo = {
           slug: savedDraft.slug,
           title: savedDraft.title,
-          location:
-            typeof data?.location === "string" ? data.location : undefined,
+          location: typeof data?.location === "string" ? data.location : undefined,
           isNew: response.status === 201,
           timestamp: now.toISOString(),
           source: "local",
         };
         setRecentSaves((current) => {
-          const existingIndex = current.findIndex(
-            (item) => item.slug === saveRecord.slug
-          );
+          const existingIndex = current.findIndex((item) => item.slug === saveRecord.slug);
           const next =
             existingIndex >= 0
-              ? [
-                  saveRecord,
-                  ...current.filter((_, idx) => idx !== existingIndex),
-                ]
+              ? [saveRecord, ...current.filter((_, idx) => idx !== existingIndex)]
               : [saveRecord, ...current];
           return next.slice(0, 5);
         });
@@ -309,29 +274,26 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
               response.status === 201
                 ? "Article created"
                 : options?.manual
-                ? "Draft saved"
-                : "Autosaved",
+                  ? "Draft saved"
+                  : "Autosaved",
             description:
               response.status === 201
                 ? `Created ${savedDraft.slug}`
                 : options?.manual
-                ? `Saved at ${formatTime(now)}`
-                : `Autosaved at ${formatTime(now)}`,
+                  ? `Saved at ${formatTime(now)}`
+                  : `Autosaved at ${formatTime(now)}`,
           },
         });
 
         setKnownSlugs((current) =>
-          current.includes(savedDraft.slug)
-            ? current
-            : [...current, savedDraft.slug]
+          current.includes(savedDraft.slug) ? current : [...current, savedDraft.slug],
         );
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
         console.error("[Arcidium] article save error", error);
-        const message =
-          error instanceof Error ? error.message : "Unable to save article.";
+        const message = error instanceof Error ? error.message : "Unable to save article.";
         setStatus({ type: "error", message });
         toast({
           variant: "destructive",
@@ -342,7 +304,7 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
         abortRef.current = null;
       }
     },
-    []
+    [knownSlugs, toast],
   );
 
   const autosave = useDebouncedCallback((next: DraftState) => {
@@ -368,64 +330,93 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
     let source: EventSource | null = null;
     let reconnectTimer: number | null = null;
 
+    const scheduleActivityRefresh = () => {
+      if (refreshTimerRef.current !== null) {
+        return;
+      }
+      refreshTimerRef.current = window.setTimeout(() => {
+        router.refresh();
+        refreshTimerRef.current = null;
+      }, 750);
+    };
+
     const handleUpdate = (event: MessageEvent) => {
       try {
         const payload = JSON.parse(event.data) as ActivityStreamPayload;
 
         if (!payload || !payload.slug) return;
 
-        if (payload.type === "delete") {
-          setRecentSaves((current) =>
-            current.filter((item) => item.slug !== payload.slug)
-          );
-          setKnownSlugs((current) =>
-            current.filter((slug) => slug !== payload.slug)
-          );
+        const nextSearchTimestamp = payload.searchGeneratedAt ?? null;
+        const shouldTriggerRefresh =
+          typeof nextSearchTimestamp === "number"
+            ? (() => {
+                const lastTimestamp = activitySearchTimestampRef.current;
+                if (typeof lastTimestamp === "number" && nextSearchTimestamp <= lastTimestamp) {
+                  return false;
+                }
+                activitySearchTimestampRef.current = nextSearchTimestamp;
+                return true;
+              })()
+            : true;
+
+        if (payload.type === "article:deleted") {
+          setRecentSaves((current) => current.filter((item) => item.slug !== payload.slug));
+          setKnownSlugs((current) => current.filter((slug) => slug !== payload.slug));
           toast({
             id: `activity-${payload.slug}`,
             title: "Article removed",
-            description: payload.title,
+            description: payload.meta?.title ?? payload.slug,
             variant: "destructive",
           });
+          if (shouldTriggerRefresh) {
+            scheduleActivityRefresh();
+          }
           return;
         }
 
-        const updatedAt = payload.updatedAt ?? new Date().toISOString();
-        const record: SaveInfo = {
-          slug: payload.slug,
-          title: payload.title,
-          location: undefined,
-          isNew: isRecentlyUpdatedTimestamp(updatedAt, 3),
-          timestamp: updatedAt,
-          source: "remote",
-        };
+        if (payload.type !== "article:saved") {
+          return;
+        }
+
+        const timestamp =
+          payload.timestamp ??
+          payload.meta?.updatedAt ??
+          payload.meta?.createdAt ??
+          new Date().toISOString();
+        const title = payload.meta?.title ?? payload.slug;
 
         setRecentSaves((current) => {
-          const existingIndex = current.findIndex(
-            (item) => item.slug === record.slug
-          );
-          const next =
-            existingIndex >= 0
-              ? [
-                  record,
-                  ...current.filter((_, idx) => idx !== existingIndex),
-                ]
-              : [record, ...current];
-          return next.slice(0, 5);
+          const existingIndex = current.findIndex((item) => item.slug === payload.slug);
+          const flaggedNew = isRecentlyUpdatedTimestamp(timestamp, 3);
+          const previousLocation = existingIndex >= 0 ? current[existingIndex].location : undefined;
+          const nextRecord: SaveInfo = {
+            slug: payload.slug,
+            title,
+            location: previousLocation,
+            isNew: flaggedNew,
+            timestamp,
+            source: "remote",
+          };
+
+          const trimmed =
+            existingIndex >= 0 ? current.filter((_, idx) => idx !== existingIndex) : current;
+
+          return [nextRecord, ...trimmed].slice(0, 5);
         });
         setKnownSlugs((current) =>
-          current.includes(record.slug)
-            ? current
-            : [...current, record.slug]
+          current.includes(payload.slug) ? current : [...current, payload.slug],
         );
 
         toast({
           id: `activity-${payload.slug}`,
           title: "Activity update",
-          description: payload.title,
+          description: title,
           variant: "default",
           duration: 3500,
         });
+        if (shouldTriggerRefresh) {
+          scheduleActivityRefresh();
+        }
       } catch (error) {
         console.error("[AdminEditor] Failed to parse activity event", error);
       }
@@ -435,11 +426,8 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
       if (source) {
         source.close();
       }
-      source = new EventSource("/api/activity/stream");
-      source.addEventListener(
-        "article-update",
-        handleUpdate as EventListener
-      );
+      source = new EventSource("/api/events");
+      source.addEventListener(ACTIVITY_EVENT_NAME, handleUpdate as EventListener);
       source.onerror = () => {
         toast({
           id: "activity-disconnected",
@@ -465,8 +453,12 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
       if (reconnectTimer) {
         window.clearTimeout(reconnectTimer);
       }
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
     };
-  }, [toast]);
+  }, [router, toast]);
 
   React.useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
@@ -497,9 +489,7 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const target = event.target as HTMLInputElement | HTMLTextAreaElement;
       const nextValue =
-        target.type === "checkbox"
-          ? (target as HTMLInputElement).checked
-          : target.value;
+        target.type === "checkbox" ? (target as HTMLInputElement).checked : target.value;
 
       updateDraft((prev) => {
         if (field === "slug" && typeof nextValue === "string") {
@@ -530,7 +520,7 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
         markdown: value,
       }));
     },
-    [updateDraft]
+    [updateDraft],
   );
 
   const handleReset = () => {
@@ -548,19 +538,14 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
     persistDraft(draft, { manual: true });
   };
 
-  const statusLabel = isDirty
-    ? "Unsaved changes"
-    : status.message ?? "Autosave ready.";
+  const statusLabel = isDirty ? "Unsaved changes" : (status.message ?? "Autosave ready.");
 
   const isSaving = status.type === "saving";
   const saveDisabled =
     isSaving || Boolean(slugError) || !draft.title.trim() || draft.markdown.trim().length === 0;
 
   return (
-    <form
-      className="grid gap-8 lg:grid-cols-[380px_minmax(0,1fr)]"
-      onSubmit={handleSubmit}
-    >
+    <form className="grid gap-8 lg:grid-cols-[380px_minmax(0,1fr)]" onSubmit={handleSubmit}>
       <section className="space-y-6 rounded-2xl border bg-card/70 p-6 shadow-sm">
         <header className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
@@ -568,8 +553,7 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
           </p>
           <h2 className="text-xl font-semibold">Metadata</h2>
           <p className="text-sm text-muted-foreground">
-            Update the front matter fields—these power category filters, search,
-            and change history.
+            Update the front matter fields—these power category filters, search, and change history.
           </p>
         </header>
 
@@ -587,12 +571,10 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
             aria-invalid={Boolean(slugError)}
             className={cn(
               slugError &&
-                "border-destructive text-destructive placeholder:text-destructive focus-visible:ring-destructive focus-visible:ring-offset-destructive/20"
+                "border-destructive text-destructive placeholder:text-destructive focus-visible:ring-destructive focus-visible:ring-offset-destructive/20",
             )}
           />
-          {slugError ? (
-            <p className="text-sm text-destructive">{slugError}</p>
-          ) : null}
+          {slugError ? <p className="text-sm text-destructive">{slugError}</p> : null}
           <Field
             label="Title"
             required
@@ -659,9 +641,7 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
           <p
             className={cn(
               "text-sm",
-              status.type === "error"
-                ? "text-destructive"
-                : "text-muted-foreground"
+              status.type === "error" ? "text-destructive" : "text-muted-foreground",
             )}
           >
             {statusLabel}
@@ -709,12 +689,7 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
                       </p>
                     ) : null}
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <Button
-                        asChild
-                        variant="secondary"
-                        size="sm"
-                        className="h-8 px-3 text-xs"
-                      >
+                      <Button asChild variant="secondary" size="sm" className="h-8 px-3 text-xs">
                         <Link href={`/docs/${save.slug}`}>View</Link>
                       </Button>
                       <Button
@@ -744,8 +719,7 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
           <header className="space-y-2">
             <h2 className="text-xl font-semibold">Content</h2>
             <p className="text-sm text-muted-foreground">
-              Draft in the WYSIWYG editor or switch to preview to inspect the
-              rendered Markdown.
+              Draft in the WYSIWYG editor or switch to preview to inspect the rendered Markdown.
             </p>
           </header>
           <div className="inline-flex gap-2">
@@ -769,16 +743,11 @@ export function AdminEditorShell({ article, existingSlugs }: AdminEditorShellPro
         </div>
 
         {previewMode === "edit" ? (
-          <MarkdownEditor
-            value={draft.markdown}
-            onChange={handleMarkdownChange}
-          />
+          <MarkdownEditor value={draft.markdown} onChange={handleMarkdownChange} />
         ) : (
           <div className="rounded-2xl border border-border/60 bg-background/90 p-6">
             {previewLoading ? (
-              <p className="text-sm text-muted-foreground">
-                Rendering preview…
-              </p>
+              <p className="text-sm text-muted-foreground">Rendering preview…</p>
             ) : previewHtml ? (
               <div
                 className="prose max-w-none dark:prose-invert"
@@ -803,13 +772,7 @@ type FieldProps = {
 } & Omit<React.ComponentPropsWithoutRef<"input">, "as"> &
   Omit<React.ComponentPropsWithoutRef<"textarea">, "as">;
 
-function Field({
-  label,
-  helperText,
-  as = "input",
-  className,
-  ...props
-}: FieldProps) {
+function Field({ label, helperText, as = "input", className, ...props }: FieldProps) {
   const id = React.useId();
   const Comp = as;
   return (
@@ -822,13 +785,11 @@ function Field({
         className={cn(
           "w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
           as === "textarea" && "min-h-[120px] resize-y",
-          className
+          className,
         )}
         {...props}
       />
-      {helperText ? (
-        <p className="text-xs text-muted-foreground">{helperText}</p>
-      ) : null}
+      {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
     </div>
   );
 }

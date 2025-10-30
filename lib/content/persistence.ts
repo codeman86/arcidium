@@ -3,10 +3,7 @@ import path from "node:path";
 
 import matter from "gray-matter";
 
-import {
-  CONTENT_ROOT,
-  type NormalizedArticleFrontMatter,
-} from "@/lib/content/articles";
+import { CONTENT_ROOT, type NormalizedArticleFrontMatter } from "@/lib/content/articles";
 
 export type ArticleSavePayload = {
   slug: string;
@@ -20,11 +17,7 @@ export function slugToFilePath(slug: string) {
   return path.join(CONTENT_ROOT, `${relativePath}.md`);
 }
 
-export async function saveArticleToFile({
-  slug,
-  frontMatter,
-  content,
-}: ArticleSavePayload) {
+export async function saveArticleToFile({ slug, frontMatter, content }: ArticleSavePayload) {
   const filePath = slugToFilePath(slug);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   const markdown = serializeMarkdown(frontMatter, content);
@@ -40,13 +33,18 @@ export function normalizeSlug(input: string) {
   if (cleaned.some((segment) => segment === "..")) {
     throw new Error("Article slug must not contain parent directory segments.");
   }
+  const segmentPattern = /^[a-z0-9](?:[a-z0-9-_]*[a-z0-9])?$/i;
+  for (const segment of cleaned) {
+    if (!segmentPattern.test(segment)) {
+      throw new Error(
+        "Article slug segments may only contain alphanumeric characters, hyphens, or underscores and must start/end with a letter or number.",
+      );
+    }
+  }
   return cleaned;
 }
 
-function serializeMarkdown(
-  frontMatter: NormalizedArticleFrontMatter,
-  content: string
-) {
+function serializeMarkdown(frontMatter: NormalizedArticleFrontMatter, content: string) {
   const data = filterUndefined({
     title: frontMatter.title,
     summary: frontMatter.summary,
@@ -78,7 +76,7 @@ function filterUndefined<T extends Record<string, unknown>>(data: T) {
       ([, value]) =>
         value !== undefined &&
         value !== null &&
-        !(typeof value === "string" && value.trim().length === 0)
-    )
+        !(typeof value === "string" && value.trim().length === 0),
+    ),
   );
 }

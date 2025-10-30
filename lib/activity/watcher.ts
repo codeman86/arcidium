@@ -3,6 +3,7 @@ import path from "node:path";
 import chokidar from "chokidar";
 
 import { listArticleMetadata } from "@/lib/content/articles";
+import { getSearchDataset } from "@/lib/search/cache";
 
 type Subscriber = (payload: ActivityUpdate) => void;
 
@@ -14,6 +15,7 @@ type ActivityUpdate = {
   updatedAt: string;
   createdAt: string;
   isDraft: boolean;
+  searchGeneratedAt?: number;
 };
 
 type WatcherController = {
@@ -48,28 +50,34 @@ export function getActivityWatcher() {
     const metadata = await listArticleMetadata({ includeDrafts: true });
     const article = metadata.find((item) => item.slug === slug);
 
-    if (!article) {
-      emit({
-        type: "delete",
-        slug,
-        title: slug.split("/").at(-1) ?? slug,
-        category: undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isDraft: false,
-      });
-      return;
+    const update: ActivityUpdate = article
+      ? {
+          type,
+          slug: article.slug,
+          title: article.title,
+          category: article.category,
+          createdAt: article.created,
+          updatedAt: article.updated ?? article.created,
+          isDraft: article.draft ?? false,
+        }
+      : {
+          type: "delete",
+          slug,
+          title: slug.split("/").at(-1) ?? slug,
+          category: undefined,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isDraft: false,
+        };
+
+    try {
+      const result = await getSearchDataset({ force: true });
+      update.searchGeneratedAt = result.generatedAt;
+    } catch (error) {
+      console.error("[ActivityWatcher] Failed to refresh search dataset after change", error);
     }
 
-    emit({
-      type,
-      slug: article.slug,
-      title: article.title,
-      category: article.category,
-      createdAt: article.created,
-      updatedAt: article.updated ?? article.created,
-      isDraft: article.draft ?? false,
-    });
+    emit(update);
   };
 
   watcher
@@ -88,9 +96,7 @@ export function getActivityWatcher() {
         if (subscribers.size === 0) {
           watcher
             .close()
-            .catch((error) =>
-              console.error("[ActivityWatcher] error closing watcher", error)
-            );
+            .catch((error) => console.error("[ActivityWatcher] error closing watcher", error));
           controller = null;
         }
       };

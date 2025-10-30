@@ -1,0 +1,13 @@
+services:
+  app:
+    image: ghcr.io/codeman86/arcidium:v0.1.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./content:/app/content
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

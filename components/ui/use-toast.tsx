@@ -23,15 +23,11 @@ type ToastInstance = ToastOptions & {
   variant: ToastVariant;
 };
 
-const ToastContext = React.createContext<ToastContextValue | undefined>(
-  undefined
-);
+const ToastContext = React.createContext<ToastContextValue | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<ToastInstance[]>([]);
-  const timers = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map()
-  );
+  const timers = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const dismiss = React.useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -66,20 +62,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
       return id;
     },
-    [dismiss]
+    [dismiss],
   );
 
   React.useEffect(() => {
+    const timersMap = timers.current;
     return () => {
-      timers.current.forEach((timer) => clearTimeout(timer));
-      timers.current.clear();
+      timersMap.forEach((timer) => clearTimeout(timer));
+      timersMap.clear();
     };
   }, []);
 
   return (
-    <ToastContext.Provider value={{ toasts, toast, dismiss }}>
-      {children}
-    </ToastContext.Provider>
+    <ToastContext.Provider value={{ toasts, toast, dismiss }}>{children}</ToastContext.Provider>
   );
 }
 
@@ -90,4 +85,3 @@ export function useToast() {
   }
   return ctx;
 }
-
