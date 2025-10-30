@@ -1,26 +1,108 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: light;
+    --background: 0 0% 100%;
+    --foreground: 220 13% 5%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 5%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 5%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --primary: 222 89% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 56% 92%;
+    --secondary-foreground: 222 47% 21%;
+    --accent: 200 94% 86%;
+    --accent-foreground: 216 61% 28%;
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 222 89% 65%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 222 47% 11%;
+    --foreground: 210 20% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 20% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 20% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --primary: 215 95% 68%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 20% 98%;
+    --accent: 197 97% 55%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 63% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 215 95% 68%;
+  }
+
+  .dracula {
+    color-scheme: dark;
+    --background: 231 23% 16%; /* #282a36 */
+    --foreground: 60 30% 96%; /* #f8f8f2 */
+    --muted: 231 23% 22%;
+    --muted-foreground: 231 19% 72%;
+    --popover: 231 23% 18%;
+    --popover-foreground: 60 30% 96%;
+    --card: 231 23% 20%;
+    --card-foreground: 60 30% 96%;
+    --border: 231 23% 28%;
+    --input: 231 23% 28%;
+    --primary: 265 82% 74%; /* #bd93f9 */
+    --primary-foreground: 233 30% 18%;
+    --secondary: 24 100% 70%; /* #ffb86c */
+    --secondary-foreground: 233 30% 18%;
+    --accent: 326 100% 74%; /* #ff79c6 */
+    --accent-foreground: 233 30% 18%;
+    --destructive: 0 78% 66%;
+    --destructive-foreground: 233 30% 18%;
+    --ring: 265 82% 74%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    transition: background-color 150ms ease, color 150ms ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.ProseMirror {
+  min-height: 320px;
+  outline: none;
+}
+
+.ProseMirror:focus {
+  outline: none;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem;
+}
+
+.ProseMirror pre {
+  background-color: hsl(var(--muted));
+  border-radius: 0.75rem;
+  padding: 1rem;
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9rem;
 }
