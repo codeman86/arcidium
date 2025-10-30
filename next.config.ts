@@ -1,4 +1,9 @@
-import type { Header, NextConfig } from "next";
+import type { NextConfig } from 'next';
+
+type SecurityHeader = {
+  key: string;
+  value: string;
+};
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
@@ -10,52 +15,52 @@ const CONTENT_SECURITY_POLICY = [
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-].join("; ");
+].join('; ');
 
-const securityHeaders: Header[] = [
+const securityHeaders: SecurityHeader[] = [
   {
-    key: "Content-Security-Policy",
-    value: CONTENT_SECURITY_POLICY.replace(/\s{2,}/g, " "),
+    key: 'Content-Security-Policy',
+    value: CONTENT_SECURITY_POLICY.replace(/\s{2,}/g, ' '),
   },
   {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
   },
   {
-    key: "X-Content-Type-Options",
-    value: "nosniff",
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
   },
   {
-    key: "X-Frame-Options",
-    value: "DENY",
+    key: 'X-Frame-Options',
+    value: 'DENY',
   },
   {
-    key: "Referrer-Policy",
-    value: "strict-origin-when-cross-origin",
+    key: 'Referrer-Policy',
+    value: 'strict-origin-when-cross-origin',
   },
   {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=()',
   },
   {
-    key: "Cross-Origin-Opener-Policy",
-    value: "same-origin",
+    key: 'Cross-Origin-Opener-Policy',
+    value: 'same-origin',
   },
   {
-    key: "Cross-Origin-Embedder-Policy",
-    value: "require-corp",
+    key: 'Cross-Origin-Embedder-Policy',
+    value: 'require-corp',
   },
   {
-    key: "Cross-Origin-Resource-Policy",
-    value: "same-origin",
+    key: 'Cross-Origin-Resource-Policy',
+    value: 'same-origin',
   },
   {
-    key: "X-DNS-Prefetch-Control",
-    value: "off",
+    key: 'X-DNS-Prefetch-Control',
+    value: 'off',
   },
   {
-    key: "X-XSS-Protection",
-    value: "0",
+    key: 'X-XSS-Protection',
+    value: '0',
   },
 ];
 
@@ -63,7 +68,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
+        source: '/:path*',
         headers: securityHeaders,
       },
     ];

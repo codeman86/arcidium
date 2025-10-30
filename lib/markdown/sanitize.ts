@@ -1,81 +1,82 @@
-import type { Element, Properties } from "hast";
-import type { Plugin } from "unified";
-import type { Root } from "hast";
+import type { Element, Properties } from 'hast';
+import type { Plugin } from 'unified';
+import type { Root } from 'hast';
 
 type HastNode = Root | Element | { type: string; children?: HastNode[] };
 
 const ALLOWED_ELEMENTS = new Set([
-  "a",
-  "abbr",
-  "blockquote",
-  "br",
-  "code",
-  "del",
-  "em",
-  "figcaption",
-  "figure",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "hr",
-  "img",
-  "li",
-  "mark",
-  "ol",
-  "p",
-  "pre",
-  "strong",
-  "sub",
-  "sup",
-  "table",
-  "tbody",
-  "td",
-  "th",
-  "thead",
-  "tr",
-  "ul",
+  'a',
+  'abbr',
+  'blockquote',
+  'br',
+  'code',
+  'del',
+  'em',
+  'figcaption',
+  'figure',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'hr',
+  'img',
+  'li',
+  'mark',
+  'ol',
+  'p',
+  'pre',
+  'strong',
+  'sub',
+  'sup',
+  'table',
+  'tbody',
+  'td',
+  'th',
+  'thead',
+  'tr',
+  'ul',
 ]);
 
 const GLOBAL_ATTRIBUTES = new Set([
-  "aria-describedby",
-  "aria-hidden",
-  "aria-label",
-  "aria-labelledby",
-  "role",
-  "title",
+  'aria-describedby',
+  'aria-hidden',
+  'aria-label',
+  'aria-labelledby',
+  'role',
+  'title',
 ]);
 
 const ELEMENT_ATTRIBUTES: Record<string, Set<string>> = {
-  a: new Set(["href", "rel", "target"]),
-  blockquote: new Set(["cite"]),
-  code: new Set(["className"]),
-  img: new Set(["alt", "height", "src", "title", "width"]),
-  pre: new Set(["className"]),
-  table: new Set(["align"]),
-  td: new Set(["colspan", "rowspan"]),
-  th: new Set(["colspan", "rowspan", "scope"]),
+  a: new Set(['href', 'rel', 'target']),
+  blockquote: new Set(['cite']),
+  code: new Set(['className']),
+  img: new Set(['alt', 'height', 'src', 'title', 'width']),
+  pre: new Set(['className']),
+  table: new Set(['align']),
+  td: new Set(['colspan', 'rowspan']),
+  th: new Set(['colspan', 'rowspan', 'scope']),
 };
 
-export const rehypeSanitize: Plugin<[], Root> = (tree, file) => {
-  void file; // ← silence "unused" warning
-  sanitizeNode(tree);
+export const rehypeSanitize: Plugin<[], Root> = function () {
+  return (tree) => {
+    sanitizeNode(tree);
+  };
 };
 
 function sanitizeNode(node: HastNode) {
-  if (!("children" in node) || !node.children) {
+  if (!('children' in node) || !node.children) {
     return;
   }
 
   node.children = node.children.reduce<HastNode[]>((acc, child) => {
-    if (child.type === "text") {
+    if (child.type === 'text') {
       acc.push(child);
       return acc;
     }
 
-    if (child.type === "element") {
+    if (child.type === 'element') {
       const element = child as Element;
       if (!ALLOWED_ELEMENTS.has(element.tagName)) {
         // Drop disallowed element but preserve its textual children.
@@ -90,7 +91,7 @@ function sanitizeNode(node: HastNode) {
     }
 
     // Remove raw and unknown nodes entirely.
-    if (child.type === "raw") {
+    if (child.type === 'raw') {
       return acc;
     }
 
@@ -104,7 +105,7 @@ function sanitizeProperties(tagName: string, properties: Properties) {
   const allowedAttributes = ELEMENT_ATTRIBUTES[tagName] ?? new Set<string>();
 
   for (const key of Object.keys(properties)) {
-    if (typeof key !== "string") {
+    if (typeof key !== 'string') {
       delete properties[key];
       continue;
     }
@@ -112,19 +113,23 @@ function sanitizeProperties(tagName: string, properties: Properties) {
     const lowerKey = key.toLowerCase();
     const value = properties[key];
 
-    if (lowerKey.startsWith("on") || lowerKey === "style") {
+    if (lowerKey.startsWith('on') || lowerKey === 'style') {
       delete properties[key];
       continue;
     }
 
-    const isAllowed = GLOBAL_ATTRIBUTES.has(lowerKey) || allowedAttributes.has(lowerKey);
+    const isAllowed =
+      GLOBAL_ATTRIBUTES.has(lowerKey) || allowedAttributes.has(lowerKey);
     if (!isAllowed) {
       delete properties[key];
       continue;
     }
 
-    if (lowerKey === "href" || lowerKey === "src") {
-      const safeValue = lowerKey === "href" ? sanitizeHref(value) : sanitizeSource(value, tagName);
+    if (lowerKey === 'href' || lowerKey === 'src') {
+      const safeValue =
+        lowerKey === 'href'
+          ? sanitizeHref(value)
+          : sanitizeSource(value, tagName);
       if (!safeValue) {
         delete properties[key];
         continue;
@@ -133,19 +138,19 @@ function sanitizeProperties(tagName: string, properties: Properties) {
       continue;
     }
 
-    if (lowerKey === "target") {
-      if (typeof value !== "string" || value.trim() === "") {
+    if (lowerKey === 'target') {
+      if (typeof value !== 'string' || value.trim() === '') {
         delete properties[key];
         continue;
       }
       const normalized = value.trim();
-      if (normalized !== "_self" && normalized !== "_blank") {
+      if (normalized !== '_self' && normalized !== '_blank') {
         delete properties[key];
         continue;
       }
-      if (normalized === "_blank") {
+      if (normalized === '_blank') {
         const relValue = properties.rel;
-        const rel = typeof relValue === "string" ? relValue : "";
+        const rel = typeof relValue === 'string' ? relValue : '';
         const enforced = enforceNoopener(rel);
         properties.rel = enforced;
       }
@@ -153,8 +158,8 @@ function sanitizeProperties(tagName: string, properties: Properties) {
       continue;
     }
 
-    if (lowerKey === "rel") {
-      if (typeof value !== "string") {
+    if (lowerKey === 'rel') {
+      if (typeof value !== 'string') {
         delete properties[key];
         continue;
       }
@@ -162,12 +167,12 @@ function sanitizeProperties(tagName: string, properties: Properties) {
       continue;
     }
 
-    if (lowerKey === "className") {
+    if (lowerKey === 'className') {
       if (Array.isArray(value)) {
         properties[key] = value
-          .map((entry) => (typeof entry === "string" ? entry : ""))
+          .map((entry) => (typeof entry === 'string' ? entry : ''))
           .filter(Boolean);
-      } else if (typeof value !== "string") {
+      } else if (typeof value !== 'string') {
         delete properties[key];
       }
     }
@@ -175,15 +180,19 @@ function sanitizeProperties(tagName: string, properties: Properties) {
 }
 
 function sanitizeHref(value: Properties[string]) {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return null;
   }
   const trimmed = value.trim();
-  if (trimmed === "") {
+  if (trimmed === '') {
     return null;
   }
 
-  if (trimmed.startsWith("#") || trimmed.startsWith("/") || trimmed.startsWith("./")) {
+  if (
+    trimmed.startsWith('#') ||
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('./')
+  ) {
     return trimmed;
   }
 
@@ -195,15 +204,15 @@ function sanitizeHref(value: Properties[string]) {
 }
 
 function sanitizeSource(value: Properties[string], tagName: string) {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return null;
   }
   const trimmed = value.trim();
-  if (trimmed === "") {
+  if (trimmed === '') {
     return null;
   }
 
-  if (trimmed.startsWith("/") || trimmed.startsWith("./")) {
+  if (trimmed.startsWith('/') || trimmed.startsWith('./')) {
     return trimmed;
   }
 
@@ -211,7 +220,7 @@ function sanitizeSource(value: Properties[string], tagName: string) {
     return trimmed;
   }
 
-  if (tagName === "img" && /^data:image\//i.test(trimmed)) {
+  if (tagName === 'img' && /^data:image\//i.test(trimmed)) {
     return trimmed;
   }
 
@@ -223,11 +232,11 @@ function enforceNoopener(rel: string) {
     rel
       .split(/\s+/)
       .map((token) => token.trim().toLowerCase())
-      .filter(Boolean),
+      .filter(Boolean)
   );
-  tokens.add("noopener");
-  tokens.add("noreferrer");
-  return Array.from(tokens).join(" ");
+  tokens.add('noopener');
+  tokens.add('noreferrer');
+  return Array.from(tokens).join(' ');
 }
 
 function extractTextContent(node: Element, acc: HastNode[]) {
@@ -235,9 +244,9 @@ function extractTextContent(node: Element, acc: HastNode[]) {
     return;
   }
   for (const child of node.children) {
-    if (child.type === "text") {
+    if (child.type === 'text') {
       acc.push(child);
-    } else if (child.type === "element") {
+    } else if (child.type === 'element') {
       extractTextContent(child as Element, acc);
     }
   }
