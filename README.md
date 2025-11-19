@@ -21,3 +21,10 @@ Then visit [http://localhost:3000](http://localhost:3000) to see the app.
 ## License
 
 MIT © Cody (codeman86)
+
+## Real-time Collaboration (Yjs demo)
+
+- A basic collaborative editing demo lives at `/docs/test-collab`.
+- Defaults to `wss://demos.yjs.dev` for the Yjs WebSocket server; override with `NEXT_PUBLIC_COLLAB_WEBSOCKET`.
+- Room name defaults to `arcidium-test-collab`; override with `NEXT_PUBLIC_COLLAB_ROOM`.
+- Open the page in multiple tabs to see shared text and cursor presence sync live.
