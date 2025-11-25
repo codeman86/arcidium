@@ -1,14 +1,33 @@
-import { Suspense } from "react";
+import { Suspense } from 'react';
 
-import { ActivitySidebar } from "@/components/activity/activity-sidebar";
-import { AdminEditorShell } from "@/components/editor/admin-editor-shell";
-import { getArticleBySlug, listArticleMetadata } from "@/lib/content/articles";
+import { ActivitySidebar } from '@/components/activity/activity-sidebar';
+import { AdminEditorShell } from '@/components/editor/admin-editor-shell';
+import { getArticleBySlug, listArticleMetadata } from '@/lib/content/articles';
 
-export default async function AdminDashboardPage() {
-  const [article, metadata] = await Promise.all([
-    getArticleBySlug("guides/getting-started"),
-    listArticleMetadata({ includeDrafts: true }),
-  ]);
+type AdminDashboardPageProps = {
+  searchParams?: {
+    slug?: string;
+    new?: string;
+  };
+};
+
+export default async function AdminDashboardPage({
+  searchParams,
+}: AdminDashboardPageProps) {
+  const metadata = await listArticleMetadata({ includeDrafts: true });
+
+  const fallbackSlug = metadata.at(0)?.slug ?? 'guides/getting-started';
+  const requestedSlugParam =
+    typeof searchParams?.slug === 'string' &&
+    searchParams.slug.trim().length > 0
+      ? searchParams.slug
+      : undefined;
+  const shouldStartBlank = searchParams?.new === '1';
+  const slugToLoad = shouldStartBlank
+    ? null
+    : (requestedSlugParam ?? fallbackSlug);
+
+  const article = slugToLoad ? await getArticleBySlug(slugToLoad) : null;
 
   const existingSlugs = metadata.map((item) => item.slug);
 
@@ -31,9 +50,9 @@ export default async function AdminDashboardPage() {
               ? {
                   slug: article.slug,
                   title: article.title,
-                  summary: article.summary ?? "",
+                  summary: article.summary ?? '',
                   category: article.category,
-                  subcategory: article.subcategory ?? "",
+                  subcategory: article.subcategory ?? '',
                   tags: article.tags,
                   created: article.created,
                   updated: article.updated,
