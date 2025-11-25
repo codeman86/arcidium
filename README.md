@@ -1,30 +1,25 @@
-# Arcidium
+# Arcidium v0.2.0 — Real-time + Offline-first Knowledge Base
 
-Arcidium is an open source, self-hostable knowledge base with a slick UI, full-text search, editor tools, and easy homelab deployment.
+Self-hostable, privacy-first knowledge base with real-time collaborative editing (Yjs), offline persistence, and full-text search.
 
-## Getting Started
+Runs anywhere — gaming PC, Framework laptop, Raspberry Pi, or cloud VM.
+
+## Features
+
+- Real-time collaborative editing (multi-user, live cursors)
+- Offline-first — works without internet
+- Full-text search across your notes
+- Multi-arch Docker (x86_64 + ARM64)
+- Zero external services
+- Built with Next.js + Yjs + SQLite
+
+## Quick Start (Docker — 30 seconds)
 
 ```bash
-npm install
-npm run dev
+docker run -d \
+  --name arcidium \
+  -p 3000:3000 \
+  -v arcidium-data:/app/data \
+  --restart unless-stopped \
+  ghcr.io/codeman86/arcidium:latest
 ```
-
-Then visit [http://localhost:3000](http://localhost:3000) to see the app.
-
-## Roadmap
-
-- Markdown-first content storage with front matter metadata
-- WYSIWYG editor that exports clean Markdown
-- Rich search across tags, categories, and full document text
-- Self-hosting recipes for Docker, Kubernetes, and bare-metal installs
-
-## License
-
-MIT © Cody (codeman86)
-
-## Real-time Collaboration (Yjs demo)
-
-- A basic collaborative editing demo lives at `/docs/test-collab`.
-- Defaults to the bundled websocket server at `ws://localhost:1234`; override with `NEXT_PUBLIC_COLLAB_WEBSOCKET`.
-- Room name defaults to `arcidium-test-collab`; override with `NEXT_PUBLIC_COLLAB_ROOM`.
-- Open the page in multiple tabs to see shared text and cursor presence sync live.
