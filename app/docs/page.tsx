@@ -1,12 +1,15 @@
-import Link from "next/link";
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
 
-import { listArticleMetadata } from "@/lib/content/articles";
+import { listArticleMetadata } from '@/lib/content/articles';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 function formatDate(isoDate: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   }).format(new Date(isoDate));
 }
 
@@ -35,17 +38,17 @@ export default async function DocsIndexPage() {
   const groupedByCategory = articles.reduce<
     Record<string, { label: string; items: ArticleMetaItem[] }>
   >((acc, article) => {
-      const categoryKey =
-        article.category?.toLowerCase().replace(/\s+/g, "-") ?? "uncategorized";
-      if (!acc[categoryKey]) {
-        acc[categoryKey] = {
-          label: article.category ?? "Uncategorized",
-          items: [],
-        };
-      }
-      acc[categoryKey].items.push(article);
-      return acc;
-    }, {});
+    const categoryKey =
+      article.category?.toLowerCase().replace(/\s+/g, '-') ?? 'uncategorized';
+    if (!acc[categoryKey]) {
+      acc[categoryKey] = {
+        label: article.category ?? 'Uncategorized',
+        items: [],
+      };
+    }
+    acc[categoryKey].items.push(article);
+    return acc;
+  }, {});
 
   const sortedCategories = Object.values(groupedByCategory).map((category) => ({
     ...category,
@@ -57,74 +60,92 @@ export default async function DocsIndexPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-12 py-16">
-      <header className="space-y-4">
-        <h1 className="text-4xl font-semibold tracking-tight">
-          Arcidium Knowledge Base
-        </h1>
-        <p className="text-muted-foreground">
-          Browse Markdown-authored knowledge grouped by category. Each entry is
-          sourced directly from the <code>content/</code> directory.
-        </p>
-      </header>
+    <>
+      <div className="mx-auto max-w-5xl space-y-12 py-16">
+        <header className="space-y-4">
+          <h1 className="text-4xl font-semibold tracking-tight">
+            Arcidium Knowledge Base
+          </h1>
+          <p className="text-muted-foreground">
+            Browse Markdown-authored knowledge grouped by category. Each entry
+            is sourced directly from the <code>content/</code> directory.
+          </p>
+        </header>
 
-      <div className="space-y-12">
-        {sortedCategories.map((category) => (
-          <section key={category.label} className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold">{category.label}</h2>
-              <p className="text-sm text-muted-foreground">
-                {category.items.length}{" "}
-                {category.items.length === 1 ? "article" : "articles"}
-              </p>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              {category.items.map((article) => (
-                <Link
-                  key={article.slug}
-                  href={`/docs/${article.slug}`}
-                  className="group flex h-full flex-col justify-between rounded-2xl border bg-card/70 p-5 transition hover:border-primary/60 hover:shadow-lg"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                      <span>{article.subcategory ?? "General"}</span>
-                      <div className="flex items-center gap-2">
-                        {isRecentlyUpdated(article.updated ?? article.created) ? (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary">
-                            New
+        <div className="space-y-12">
+          {sortedCategories.map((category) => (
+            <section key={category.label} className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold">{category.label}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {category.items.length}{' '}
+                  {category.items.length === 1 ? 'article' : 'articles'}
+                </p>
+              </div>
+              <div className="grid gap-6 md:grid-cols-2">
+                {category.items.map((article) => (
+                  <Link
+                    key={article.slug}
+                    href={`/docs/${article.slug}`}
+                    className="group flex h-full flex-col justify-between rounded-2xl border bg-card/70 p-5 transition hover:border-primary/60 hover:shadow-lg"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        <span>{article.subcategory ?? 'General'}</span>
+                        <div className="flex items-center gap-2">
+                          {isRecentlyUpdated(
+                            article.updated ?? article.created
+                          ) ? (
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary">
+                              New
+                            </span>
+                          ) : null}
+                          <span>
+                            {formatDate(article.updated ?? article.created)}
                           </span>
-                        ) : null}
-                        <span>{formatDate(article.updated ?? article.created)}</span>
+                        </div>
                       </div>
+                      <h3 className="text-lg font-semibold leading-tight group-hover:text-primary">
+                        {article.title}
+                      </h3>
+                      {article.summary ? (
+                        <p className="text-sm text-muted-foreground">
+                          {article.summary}
+                        </p>
+                      ) : null}
                     </div>
-                    <h3 className="text-lg font-semibold leading-tight group-hover:text-primary">
-                      {article.title}
-                    </h3>
-                    {article.summary ? (
-                      <p className="text-sm text-muted-foreground">
-                        {article.summary}
-                      </p>
+                    {article.tags.length > 0 ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {article.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition group-hover:bg-primary/10 group-hover:text-primary"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
                     ) : null}
-                  </div>
-                  {article.tags.length > 0 ? (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {article.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition group-hover:bg-primary/10 group-hover:text-primary"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       </div>
-    </div>
+
+      <Link
+        href="/admin?new=1"
+        className={cn(
+          buttonVariants({ size: 'lg' }),
+          'fixed bottom-6 right-6 z-20 shadow-xl shadow-primary/40 transition hover:translate-y-0.5'
+        )}
+        aria-label="Create a new Arcidium article"
+      >
+        <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
+        New Article
+      </Link>
+    </>
   );
 }
 

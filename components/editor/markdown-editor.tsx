@@ -1,27 +1,28 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 import {
   Bold,
   Code,
+  Code2,
+  Heading1,
   Heading2,
   Heading3,
-  Heading4,
   Italic,
   List,
   ListOrdered,
   Quote,
   Redo,
   Undo,
-} from "lucide-react";
-import { EditorContent, useEditor } from "@tiptap/react";
+} from 'lucide-react';
+import { EditorContent, useEditor } from '@tiptap/react';
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   DEFAULT_EDITOR_PLACEHOLDER,
   createMarkdownExtensions,
-} from "@/lib/editor/markdown";
+} from '@/lib/editor/markdown';
 
 type MarkdownEditorProps = {
   value: string;
@@ -45,18 +46,18 @@ export function MarkdownEditor({
   const editor = useEditor({
     editable: !disabled,
     extensions: createMarkdownExtensions(placeholder),
-    content: value ?? "",
+    content: value ?? '',
     immediatelyRender: false,
     editorProps: {
       attributes: {
         class:
-          "prose prose-slate dark:prose-invert max-w-none focus:outline-none min-h-[320px]",
+          'prose prose-slate dark:prose-invert max-w-none focus:outline-none min-h-[320px]',
       },
     },
     onUpdate({ editor }) {
       if (!onChange) return;
       const markdown = getMarkdownFromStorage(editor);
-      if (typeof markdown === "string") {
+      if (typeof markdown === 'string') {
         onChange(markdown);
       }
     },
@@ -66,7 +67,7 @@ export function MarkdownEditor({
     if (!editor) return;
     const current = getMarkdownFromStorage(editor);
     if (current !== value) {
-      editor.commands.setContent(value ?? "");
+      editor.commands.setContent(value ?? '');
     }
   }, [editor, value]);
 
@@ -83,8 +84,8 @@ export function MarkdownEditor({
       <EditorToolbar editor={editor} disabled={disabled} />
       <div
         className={cn(
-          "rounded-lg border bg-card shadow-sm transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-          disabled && "opacity-60"
+          'rounded-lg border bg-card shadow-sm transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+          disabled && 'opacity-60'
         )}
       >
         <EditorContent editor={editor} className="px-4 py-6" />
@@ -93,7 +94,9 @@ export function MarkdownEditor({
   );
 }
 
-function getMarkdownFromStorage(editor: NonNullable<ReturnType<typeof useEditor>>) {
+function getMarkdownFromStorage(
+  editor: NonNullable<ReturnType<typeof useEditor>>
+) {
   const storage = editor.storage as {
     markdown?: {
       getMarkdown: () => string;
@@ -119,80 +122,86 @@ function EditorToolbar({ editor, disabled = false }: EditorToolbarProps) {
 
   const actions = [
     {
-      label: "Undo",
+      label: 'Undo',
       icon: Undo,
       action: () => editor.chain().focus().undo().run(),
       isActive: () => false,
     },
     {
-      label: "Redo",
+      label: 'Redo',
       icon: Redo,
       action: () => editor.chain().focus().redo().run(),
       isActive: () => false,
     },
-    "divider",
+    'divider',
     {
-      label: "Heading 2",
+      label: 'Heading 1',
+      icon: Heading1,
+      action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
+      isActive: () => editor.isActive('heading', { level: 1 }),
+    },
+    {
+      label: 'Heading 2',
       icon: Heading2,
       action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-      isActive: () => editor.isActive("heading", { level: 2 }),
+      isActive: () => editor.isActive('heading', { level: 2 }),
     },
     {
-      label: "Heading 3",
+      label: 'Heading 3',
       icon: Heading3,
       action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),
-      isActive: () => editor.isActive("heading", { level: 3 }),
+      isActive: () => editor.isActive('heading', { level: 3 }),
     },
+    'divider',
     {
-      label: "Heading 4",
-      icon: Heading4,
-      action: () => editor.chain().focus().toggleHeading({ level: 4 }).run(),
-      isActive: () => editor.isActive("heading", { level: 4 }),
-    },
-    "divider",
-    {
-      label: "Bold",
+      label: 'Bold',
       icon: Bold,
       action: () => editor.chain().focus().toggleBold().run(),
-      isActive: () => editor.isActive("bold"),
+      isActive: () => editor.isActive('bold'),
     },
     {
-      label: "Italic",
+      label: 'Italic',
       icon: Italic,
       action: () => editor.chain().focus().toggleItalic().run(),
-      isActive: () => editor.isActive("italic"),
+      isActive: () => editor.isActive('italic'),
     },
     {
-      label: "Code",
+      label: 'Code',
       icon: Code,
       action: () => editor.chain().focus().toggleCode().run(),
-      isActive: () => editor.isActive("code"),
+      isActive: () => editor.isActive('code'),
     },
-    "divider",
     {
-      label: "Bullet list",
+      label: 'Code block',
+      icon: Code2,
+      action: () => editor.chain().focus().toggleCodeBlock().run(),
+      isActive: () => editor.isActive('codeBlock'),
+    },
+    'divider',
+    {
+      label: 'Bullet list',
       icon: List,
       action: () => editor.chain().focus().toggleBulletList().run(),
-      isActive: () => editor.isActive("bulletList"),
+      isActive: () => editor.isActive('bulletList'),
     },
     {
-      label: "Ordered list",
+      label: 'Ordered list',
       icon: ListOrdered,
       action: () => editor.chain().focus().toggleOrderedList().run(),
-      isActive: () => editor.isActive("orderedList"),
+      isActive: () => editor.isActive('orderedList'),
     },
     {
-      label: "Quote",
+      label: 'Quote',
       icon: Quote,
       action: () => editor.chain().focus().toggleBlockquote().run(),
-      isActive: () => editor.isActive("blockquote"),
+      isActive: () => editor.isActive('blockquote'),
     },
   ] as const;
 
   return (
     <div className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1">
       {actions.map((entry, index) =>
-        entry === "divider" ? (
+        entry === 'divider' ? (
           <span
             key={`divider-${index}`}
             className="mx-1 h-6 w-px bg-border last:hidden"
@@ -202,7 +211,7 @@ function EditorToolbar({ editor, disabled = false }: EditorToolbarProps) {
           <Button
             key={entry.label}
             type="button"
-            variant={entry.isActive() ? "secondary" : "ghost"}
+            variant={entry.isActive() ? 'secondary' : 'ghost'}
             size="sm"
             className="h-9 w-9 p-0"
             onClick={apply(() => entry.action())}
