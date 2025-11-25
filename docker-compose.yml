@@ -1,13 +1,22 @@
 services:
   app:
-    image: ghcr.io/codeman86/arcidium:v0.1.0
+    image: codeman86/arcidium:v0.2.0
     ports:
       - "3000:3000"
+      - "1234:1234"
     volumes:
       - ./content:/app/content
+      - collab-data:/app/data
+    environment:
+      - COLLAB_PORT=1234
+      - COLLAB_DB_PATH=/app/data/collab.sqlite
+      - NEXT_PUBLIC_COLLAB_WEBSOCKET=ws://localhost:1234
+      - NEXT_PUBLIC_COLLAB_ROOM=arcidium-test-collab
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 30s
+volumes:
+  collab-data:
